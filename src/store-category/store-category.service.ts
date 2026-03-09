@@ -100,7 +100,7 @@ export class StoreCategoryService {
     try {
       const result = await this.storeCategoryRepository.createStoreCategory({
         slug: data.slug,
-        isAvailable: data.isAvailable ?? true,
+        isAvailable: data.isAvailable ?? false,
       });
       this.logger.debug(`Store category created with id: ${JSON.stringify(result)}`);
       return result[0];

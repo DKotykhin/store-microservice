@@ -1,0 +1,1 @@
+ALTER TABLE `category` MODIFY COLUMN `is_available` boolean NOT NULL DEFAULT false;

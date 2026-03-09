@@ -15,6 +15,13 @@
       "when": 1770928619692,
       "tag": "0001_lumpy_yellowjacket",
       "breakpoints": true
+    },
+    {
+      "idx": 2,
+      "version": "5",
+      "when": 1773073412252,
+      "tag": "0002_superb_warhawk",
+      "breakpoints": true
     }
   ]
 }

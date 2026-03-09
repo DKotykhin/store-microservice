@@ -9,7 +9,7 @@ import { CategoryTranslation, categoryTranslation } from './category-translation
 export const category = mysqlTable('category', {
   ...baseColumns,
   slug: varchar({ length: 255 }).notNull(),
-  isAvailable: boolean('is_available').default(true).notNull(),
+  isAvailable: boolean('is_available').default(false).notNull(),
   sortOrder: int('sort_order').default(0).notNull(),
 });
 
