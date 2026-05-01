@@ -47,7 +47,7 @@ export class StoreItemController {
   }
 
   @GrpcMethod(STORE_ITEM_SERVICE_NAME, 'GetStoreItemById')
-  async getStoreItemById(data: GetStoreItemByIdRequest): Promise<StoreItemWithOption | null> {
+  async getStoreItemById(data: GetStoreItemByIdRequest): Promise<StoreItemWithOption> {
     this.logger.debug(`Received request to find store item for id: ${data.itemId} with language: ${data.language}`);
     return await this.storeItemService.getStoreItemByIdWithTranslation(data.itemId, data.language);
   }

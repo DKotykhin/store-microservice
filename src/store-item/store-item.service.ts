@@ -77,7 +77,7 @@ export class StoreItemService {
   }
 
   // get store item by id with translations for a specific language
-  async getStoreItemByIdWithTranslation(itemId: string, language: number): Promise<StoreItemWithOption | null> {
+  async getStoreItemByIdWithTranslation(itemId: string, language: number): Promise<StoreItemWithOption> {
     this.logger.debug(`Fetching store item for id: ${itemId} with translations for language: ${language}`);
     try {
       const item = await this.storeItemRepository.findStoreItemsByIdWithTranslation(
@@ -86,10 +86,11 @@ export class StoreItemService {
       );
       if (!item) {
         this.logger.warn(`No store item found for id: ${itemId} and language: ${language}`);
-        return null;
+        throw AppError.notFound(`Store item with id: ${itemId} not found`);
       }
       return mapItem(item);
     } catch (error) {
+      if (error instanceof AppError) throw error;
       this.logger.error(`Error fetching store item: ${error instanceof Error ? error.message : error}`);
       throw AppError.internalServerError('Failed to retrieve store item');
     }
