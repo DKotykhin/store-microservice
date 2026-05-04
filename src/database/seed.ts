@@ -186,12 +186,42 @@ async function seed() {
 
   // ── 7. Images (→ item) ──
   await db.insert(image).values([
-    { url: '/images/ethiopia-1.jpg', alt: 'Ethiopia Yirgacheffe beans', sortOrder: 0, itemId: itemEthiopiaId },
-    { url: '/images/ethiopia-2.jpg', alt: 'Ethiopia packaging', sortOrder: 1, itemId: itemEthiopiaId },
-    { url: '/images/colombia-1.jpg', alt: 'Colombia Supremo beans', sortOrder: 0, itemId: itemColombiaId },
-    { url: '/images/honduras-1.jpg', alt: 'Honduras Copan beans', sortOrder: 0, itemId: itemHondurasId },
-    { url: '/images/honduras-2.jpg', alt: 'Honduras packaging', sortOrder: 1, itemId: itemHondurasId },
-    { url: '/images/v60.jpg', alt: 'Hario V60', sortOrder: 0, itemId: itemV60Id },
+    {
+      url: 'https://res.cloudinary.com/dlo66sher/image/upload/v1706304020/coffee/Ethiopia_Guji_af9kxq.jpg',
+      alt: 'Ethiopia Yirgacheffe beans',
+      sortOrder: 0,
+      itemId: itemEthiopiaId,
+    },
+    {
+      url: 'https://res.cloudinary.com/dlo66sher/image/upload/v1706304020/coffee/Ethiopia_Sidamo_chjrkw.jpg',
+      alt: 'Ethiopia packaging',
+      sortOrder: 1,
+      itemId: itemEthiopiaId,
+    },
+    {
+      url: 'https://res.cloudinary.com/dlo66sher/image/upload/v1706120761/coffee/Tanzania_Tamu_Yetu_izbkkh.webp',
+      alt: 'Colombia Supremo beans',
+      sortOrder: 0,
+      itemId: itemColombiaId,
+    },
+    {
+      url: 'https://res.cloudinary.com/dlo66sher/image/upload/v1706304020/coffee/Honduras_Santa_Rosa_jyebm9.jpg',
+      alt: 'Honduras Copan beans',
+      sortOrder: 0,
+      itemId: itemHondurasId,
+    },
+    {
+      url: 'https://res.cloudinary.com/dlo66sher/image/upload/v1706304020/coffee/Honduras_Santa_Rosa1_lqssdx.jpg',
+      alt: 'Honduras packaging',
+      sortOrder: 1,
+      itemId: itemHondurasId,
+    },
+    {
+      url: 'https://res.cloudinary.com/dlo66sher/image/upload/v1706304122/Tea/Orange_Ginger__c0y05d.jpg',
+      alt: 'Hario V60',
+      sortOrder: 0,
+      itemId: itemV60Id,
+    },
   ]);
 
   // ── 8. Item Attributes (→ item + attribute) ──
