@@ -1,6 +1,6 @@
 import { Inject, Injectable, Logger } from '@nestjs/common';
 import { drizzle } from 'drizzle-orm/mysql2';
-import { and, asc, eq, gte, max, sql } from 'drizzle-orm';
+import { and, asc, eq, gte, isNotNull, max, sql } from 'drizzle-orm';
 
 import * as schema from 'src/database/schema';
 import type { Currency, LanguageEnum, PriceType } from 'src/database/enums';
@@ -420,17 +420,18 @@ export class StoreItemRepository {
   }
 
   // restore stock by quantity (used when a reservation is released or an order is cancelled/refunded)
+  // skips the update entirely when quantity is NULL (stock not tracked)
   async releaseStock(data: ReleaseStockRequest | ReturnStockRequest): Promise<void> {
     if (data.itemAttributeId) {
       await this.drizzleDb
         .update(schema.itemAttribute)
         .set({ quantity: sql`quantity + ${data.quantity}` })
-        .where(eq(schema.itemAttribute.id, data.itemAttributeId));
+        .where(and(eq(schema.itemAttribute.id, data.itemAttributeId), isNotNull(schema.itemAttribute.quantity)));
     } else {
       await this.drizzleDb
         .update(schema.item)
         .set({ quantity: sql`quantity + ${data.quantity}` })
-        .where(eq(schema.item.id, data.itemId));
+        .where(and(eq(schema.item.id, data.itemId), isNotNull(schema.item.quantity)));
     }
   }
 }
