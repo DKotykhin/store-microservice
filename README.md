@@ -10,7 +10,7 @@
 ![ESLint](https://img.shields.io/badge/ESLint-4B32C3?style=flat&logo=eslint&logoColor=white)
 ![Prettier](https://img.shields.io/badge/Prettier-F7B93E?style=flat&logo=prettier&logoColor=black)
 
-A gRPC-based microservice for managing store categories, items, attributes, prices, and images in the CoffeeDoor microservices ecosystem. Supports multi-language translations (EN, UK, RU, DE, ES, FR).
+A gRPC-based microservice for managing store categories, items, attributes, prices, images, and stock inventory in the CoffeeDoor microservices ecosystem. Supports multi-language translations (EN, UK, RU, DE, ES, FR).
 
 ## Features
 
@@ -19,6 +19,7 @@ A gRPC-based microservice for managing store categories, items, attributes, pric
 - **Variant Management** - Link category attributes to items as purchasable variants with per-language values and prices
 - **Image Management** - Add, remove, and reorder product images
 - **Price Management** - Base prices for simple items and per-variant prices (regular, discount, wholesale)
+- **Stock Inventory** - Optional quantity tracking at item or variant level; `null` means unlimited/untracked. Atomic reservation, release, and return RPCs for order-microservice integration
 - **Multi-Language Support** - Translations for 6 languages (English, Ukrainian, Russian, German, Spanish, French)
 - **Smart Positioning** - Automatic sort order adjustment when reordering items and images
 - **Translation CRUD** - Upsert and delete translations for items and item attribute values independently
@@ -62,8 +63,8 @@ A gRPC-based microservice for managing store categories, items, attributes, pric
 
 | Method | Request | Response | Description |
 |--------|---------|----------|-------------|
-| `CreateStoreItem` | `CreateStoreItemRequest` | `Id` | Create a new store item |
-| `UpdateStoreItem` | `UpdateStoreItemRequest` | `Id` | Update item fields (slug, brand, availability, etc.) |
+| `CreateStoreItem` | `CreateStoreItemRequest` | `Id` | Create a new store item (accepts optional `quantity`) |
+| `UpdateStoreItem` | `UpdateStoreItemRequest` | `Id` | Update item fields (slug, brand, availability, quantity, etc.) |
 | `DeleteStoreItem` | `Id` | `StatusResponse` | Delete item with cascading and sibling position adjustment |
 | `ChangeStoreItemPosition` | `ChangeStoreItemPositionRequest` | `StoreItemWithOption` | Reorder item within its category |
 
@@ -86,7 +87,7 @@ A gRPC-based microservice for managing store categories, items, attributes, pric
 
 | Method | Request | Response | Description |
 |--------|---------|----------|-------------|
-| `AddStoreItemVariant` | `AddStoreItemVariantRequest` | `Id` | Link an existing attribute to an item; returns `item_attribute_id` |
+| `AddStoreItemVariant` | `AddStoreItemVariantRequest` | `Id` | Link an existing attribute to an item; accepts optional `quantity`; returns `item_attribute_id` |
 | `RemoveStoreItemVariant` | `Id` | `StatusResponse` | Remove a variant link (cascades to its translations and prices) |
 | `UpsertItemAttributeTranslation` | `UpsertItemAttributeTranslationRequest` | `Id` | Set the variant value for a specific language (e.g. "250g" / "250г") |
 | `AddVariantPrice` | `AddVariantPriceRequest` | `Id` | Add a price type (regular/discount/wholesale) for a variant |
@@ -98,6 +99,16 @@ A gRPC-based microservice for managing store categories, items, attributes, pric
 |--------|---------|----------|-------------|
 | `AddStoreItemBasePrice` | `AddStoreItemBasePriceRequest` | `Id` | Add a base price not linked to any variant |
 | `RemoveStoreItemBasePrice` | `Id` | `StatusResponse` | Remove a base price by its id |
+
+**Stock Inventory**
+
+| Method | Request | Response | Description |
+|--------|---------|----------|-------------|
+| `AttemptReserveStock` | `AttemptReserveStockRequest` | `AttemptReserveStockResponse` | Atomically decrement stock by `quantity`. Returns `{ stockTracked, reserved }`. If `quantity` is `null` on the item/variant, returns `stockTracked: false` and the caller skips the check |
+| `ReleaseStock` | `ReleaseStockRequest` | `StatusResponse` | Restore stock when a cart reservation is released (cart cleared or TTL expired) |
+| `ReturnStock` | `ReturnStockRequest` | `StatusResponse` | Restore stock after an order is cancelled or refunded |
+
+> `item_attribute_id` is optional in all three requests. If provided, the operation targets the variant's stock (`item_attribute.quantity`); otherwise it targets the item's stock (`item.quantity`). Setting `quantity = null` on an item or variant means unlimited / not tracked — no stock check will be performed by the order-microservice.
 
 ### HealthCheckService
 
@@ -121,6 +132,14 @@ category ──┬── category_translation (1:N)
 `item_attribute` is a junction table linking an **item** to an **attribute** definition. Each item_attribute can have:
 - **translations** — the attribute value for this item (e.g., "250g", "Washed")
 - **prices** — variant prices (e.g., regular: 249 UAH). If no prices are linked, the attribute is treated as informational (e.g., score: 84)
+- **quantity** — optional stock count for this variant (`NULL` = unlimited/not tracked)
+
+`item` also has an optional **quantity** column for products without variants.
+
+Stock is resolved at the most specific level available:
+- If the cart item has a `variantId` → use `item_attribute.quantity`
+- If no variant → use `item.quantity`
+- If `quantity` is `null` at the resolved level → stock is not tracked; the order-microservice skips the reservation check
 
 All tables share base columns: `id` (UUID), `createdAt`, `updatedAt`.
 
@@ -180,8 +199,9 @@ UpsertStoreItemTranslation { itemId, language: "ua", title: "Колумбія Е
 
 **6. Link item to attribute** (one call per variant)
 ```
-AddStoreItemVariant { itemId, attributeId: <weight-id> } → Id (itemAttributeId)
+AddStoreItemVariant { itemId, attributeId: <weight-id>, quantity: 50 } → Id (itemAttributeId)
 ```
+> `quantity` is optional. Omit it (or pass `null`) to leave this variant untracked (unlimited stock).
 
 **7. Set the value per language** for that variant
 ```
@@ -210,6 +230,30 @@ UpsertItemAttributeTranslation { itemAttributeId, language: "en", value: "84" }
 AddStoreItemImage { itemId, url: "https://...", alt: "Front view", sortOrder: 1 } → Id (imageId)
 AddStoreItemImage { itemId, url: "https://...", alt: "Side view",  sortOrder: 2 } → Id (imageId)
 ```
+
+## Database Commands
+
+```bash
+# Generate a new migration file from schema changes
+npm run db:generate
+
+# Apply pending migrations to the database
+npm run db:migrate
+
+# Push schema changes directly without migration files (dev only)
+npm run db:push
+
+# Open Drizzle Studio (visual DB browser)
+npm run db:studio
+
+# Reset the database (drops and recreates all tables)
+npm run db:reset
+
+# Seed the database with initial data
+npm run db:seed
+```
+
+> **Note:** The project was initially bootstrapped with `db:push`. If you are transitioning to `db:migrate` for production use, the `__drizzle_migrations` tracking table must be seeded with records for previously applied migrations before running `db:migrate`.
 
 ## Environment Variables
 

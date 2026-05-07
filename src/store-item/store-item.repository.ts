@@ -1,13 +1,17 @@
 import { Inject, Injectable, Logger } from '@nestjs/common';
 import { drizzle } from 'drizzle-orm/mysql2';
-import { and, asc, eq, max } from 'drizzle-orm';
+import { and, asc, eq, gte, max, sql } from 'drizzle-orm';
 
 import * as schema from 'src/database/schema';
 import type { Currency, LanguageEnum, PriceType } from 'src/database/enums';
 import type {
   AddStoreItemImageRequest,
   AddStoreItemVariantRequest,
+  AttemptReserveStockRequest,
+  AttemptReserveStockResponse,
   CreateStoreItemRequest,
+  ReleaseStockRequest,
+  ReturnStockRequest,
   UpdateStoreItemRequest,
 } from 'src/generated-types/store-item';
 
@@ -180,6 +184,7 @@ export class StoreItemRepository {
         ...(updateData.expectedDate !== undefined &&
           updateData.expectedDate !== null && { expectedDate: updateData.expectedDate }),
         ...(data.isAvailable !== undefined && data.isAvailable !== null && { isAvailable: data.isAvailable }),
+        ...(updateData.quantity !== undefined && { quantity: updateData.quantity ?? null }),
       })
       .where(eq(schema.item.id, itemId));
   }
@@ -297,7 +302,7 @@ export class StoreItemRepository {
     this.logger.debug(`Linking attribute ${data.attributeId} to item ${data.itemId}`);
     const [created] = await this.drizzleDb
       .insert(schema.itemAttribute)
-      .values({ itemId: data.itemId, attributeId: data.attributeId })
+      .values({ itemId: data.itemId, attributeId: data.attributeId, quantity: data.quantity ?? null })
       .$returningId();
     return { id: created.id };
   }
@@ -381,5 +386,51 @@ export class StoreItemRepository {
   async removeStoreItemBasePrice(id: string): Promise<void> {
     this.logger.debug(`Removing base price with id: ${id}`);
     await this.drizzleDb.delete(schema.itemPrice).where(eq(schema.itemPrice.id, id));
+  }
+
+  // atomically decrement stock by quantity; returns whether stock is tracked and whether the reservation succeeded
+  async attemptReserveStock(data: AttemptReserveStockRequest): Promise<AttemptReserveStockResponse> {
+    if (data.itemAttributeId) {
+      const attr = await this.drizzleDb.query.itemAttribute.findFirst({
+        where: eq(schema.itemAttribute.id, data.itemAttributeId),
+        columns: { quantity: true },
+      });
+      if (!attr || attr.quantity === null) return { stockTracked: false, reserved: false };
+
+      const [header] = await this.drizzleDb
+        .update(schema.itemAttribute)
+        .set({ quantity: sql`quantity - ${data.quantity}` })
+        .where(
+          and(eq(schema.itemAttribute.id, data.itemAttributeId), gte(schema.itemAttribute.quantity, data.quantity)),
+        );
+      return { stockTracked: true, reserved: header.affectedRows > 0 };
+    }
+
+    const it = await this.drizzleDb.query.item.findFirst({
+      where: eq(schema.item.id, data.itemId),
+      columns: { quantity: true },
+    });
+    if (!it || it.quantity === null) return { stockTracked: false, reserved: false };
+
+    const [header] = await this.drizzleDb
+      .update(schema.item)
+      .set({ quantity: sql`quantity - ${data.quantity}` })
+      .where(and(eq(schema.item.id, data.itemId), gte(schema.item.quantity, data.quantity)));
+    return { stockTracked: true, reserved: header.affectedRows > 0 };
+  }
+
+  // restore stock by quantity (used when a reservation is released or an order is cancelled/refunded)
+  async releaseStock(data: ReleaseStockRequest | ReturnStockRequest): Promise<void> {
+    if (data.itemAttributeId) {
+      await this.drizzleDb
+        .update(schema.itemAttribute)
+        .set({ quantity: sql`quantity + ${data.quantity}` })
+        .where(eq(schema.itemAttribute.id, data.itemAttributeId));
+    } else {
+      await this.drizzleDb
+        .update(schema.item)
+        .set({ quantity: sql`quantity + ${data.quantity}` })
+        .where(eq(schema.item.id, data.itemId));
+    }
   }
 }

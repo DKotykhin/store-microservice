@@ -20,6 +20,7 @@ export const item = mysqlTable(
     isAvailable: boolean('is_available').default(true).notNull(),
     expectedDate: date('expected_date', { mode: 'date' }),
     sortOrder: int('sort_order').default(0).notNull(),
+    quantity: int('quantity'),
     categoryId: varchar('category_id', { length: 36 })
       .notNull()
       .references(() => category.id, { onDelete: 'cascade' }),

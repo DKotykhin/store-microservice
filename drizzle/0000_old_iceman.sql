@@ -16,7 +16,8 @@ CREATE TABLE `attribute` (
 	`category_id` varchar(36) NOT NULL,
 	`slug` varchar(255) NOT NULL,
 	`sort_order` int NOT NULL DEFAULT 0,
-	CONSTRAINT `attribute_id` PRIMARY KEY(`id`)
+	CONSTRAINT `attribute_id` PRIMARY KEY(`id`),
+	CONSTRAINT `attribute_category_slug_unique` UNIQUE(`category_id`,`slug`)
 );
 --> statement-breakpoint
 CREATE TABLE `category_translation` (
@@ -36,7 +37,7 @@ CREATE TABLE `category` (
 	`created_at` timestamp NOT NULL DEFAULT (now()),
 	`updated_at` timestamp NOT NULL DEFAULT (now()) ON UPDATE CURRENT_TIMESTAMP,
 	`slug` varchar(255) NOT NULL,
-	`is_available` boolean NOT NULL DEFAULT true,
+	`is_available` boolean NOT NULL DEFAULT false,
 	`sort_order` int NOT NULL DEFAULT 0,
 	CONSTRAINT `category_id` PRIMARY KEY(`id`)
 );
@@ -69,6 +70,7 @@ CREATE TABLE `item_attribute` (
 	`updated_at` timestamp NOT NULL DEFAULT (now()) ON UPDATE CURRENT_TIMESTAMP,
 	`item_id` varchar(36) NOT NULL,
 	`attribute_id` varchar(36) NOT NULL,
+	`quantity` int,
 	CONSTRAINT `item_attribute_id` PRIMARY KEY(`id`)
 );
 --> statement-breakpoint
@@ -107,8 +109,10 @@ CREATE TABLE `item` (
 	`is_available` boolean NOT NULL DEFAULT true,
 	`expected_date` date,
 	`sort_order` int NOT NULL DEFAULT 0,
+	`quantity` int,
 	`category_id` varchar(36) NOT NULL,
-	CONSTRAINT `item_id` PRIMARY KEY(`id`)
+	CONSTRAINT `item_id` PRIMARY KEY(`id`),
+	CONSTRAINT `item_category_slug_unique` UNIQUE(`category_id`,`slug`)
 );
 --> statement-breakpoint
 ALTER TABLE `attribute_translation` ADD CONSTRAINT `attribute_translation_attribute_id_attribute_id_fk` FOREIGN KEY (`attribute_id`) REFERENCES `attribute`(`id`) ON DELETE cascade ON UPDATE no action;--> statement-breakpoint

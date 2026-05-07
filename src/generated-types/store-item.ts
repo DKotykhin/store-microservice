@@ -72,6 +72,7 @@ export interface CreateStoreItemRequest {
   brand?: string | null | undefined;
   isAvailable?: boolean | null | undefined;
   expectedDate?: Date | null | undefined;
+  quantity?: number | null | undefined;
 }
 
 /** declaration of UpdateStoreItemRequest message */
@@ -82,6 +83,7 @@ export interface UpdateStoreItemRequest {
   brand?: string | null | undefined;
   isAvailable?: boolean | null | undefined;
   expectedDate?: Date | null | undefined;
+  quantity?: number | null | undefined;
 }
 
 /** declaration of StoreItemTranslationRequest message */
@@ -120,6 +122,7 @@ export interface ChangeStoreItemPositionRequest {
 export interface AddStoreItemVariantRequest {
   itemId: string;
   attributeId: string;
+  quantity?: number | null | undefined;
 }
 
 /**
@@ -178,6 +181,7 @@ export interface StoreItemWithOption {
   variants: ItemVariant[];
   prices: ItemBasePrice[];
   attributes: ItemInfoAttribute[];
+  quantity?: number | null | undefined;
 }
 
 /** Message representing an informational attribute (no price impact) */
@@ -197,6 +201,7 @@ export interface ItemVariant {
   discountPrice?: string | null | undefined;
   wholesalePrice?: string | null | undefined;
   currency?: Currency | null | undefined;
+  quantity?: number | null | undefined;
 }
 
 /** Message representing a base price for items without variants */
@@ -213,6 +218,33 @@ export interface ItemImage {
   url: string;
   alt?: string | null | undefined;
   sortOrder: number;
+}
+
+/** Message to request an atomic stock reservation for an item or variant */
+export interface AttemptReserveStockRequest {
+  itemId: string;
+  itemAttributeId?: string | null | undefined;
+  quantity: number;
+}
+
+/** Response indicating whether stock is tracked and whether the reservation succeeded */
+export interface AttemptReserveStockResponse {
+  stockTracked: boolean;
+  reserved: boolean;
+}
+
+/** Message to release a previously held stock reservation (e.g. cart cleared or TTL expired) */
+export interface ReleaseStockRequest {
+  itemId: string;
+  itemAttributeId?: string | null | undefined;
+  quantity: number;
+}
+
+/** Message to return stock after an order is cancelled or refunded */
+export interface ReturnStockRequest {
+  itemId: string;
+  itemAttributeId?: string | null | undefined;
+  quantity: number;
 }
 
 export const STORE_ITEM_V1_PACKAGE_NAME = "store_item.v1";
@@ -306,6 +338,18 @@ export interface StoreItemServiceClient {
   /** rpc to remove a base price from a store item */
 
   removeStoreItemBasePrice(request: Id): Observable<StatusResponse>;
+
+  /** rpc to atomically reserve stock for an item or variant; returns whether stock is tracked and whether reservation succeeded */
+
+  attemptReserveStock(request: AttemptReserveStockRequest): Observable<AttemptReserveStockResponse>;
+
+  /** rpc to release a previously held reservation (e.g. cart cleared, TTL expired) */
+
+  releaseStock(request: ReleaseStockRequest): Observable<StatusResponse>;
+
+  /** rpc to return stock after an order is cancelled or refunded */
+
+  returnStock(request: ReturnStockRequest): Observable<StatusResponse>;
 }
 
 /** StoreItemService defines the gRPC service for managing store items. */
@@ -394,6 +438,20 @@ export interface StoreItemServiceController {
   /** rpc to remove a base price from a store item */
 
   removeStoreItemBasePrice(request: Id): Promise<StatusResponse> | Observable<StatusResponse> | StatusResponse;
+
+  /** rpc to atomically reserve stock for an item or variant; returns whether stock is tracked and whether reservation succeeded */
+
+  attemptReserveStock(
+    request: AttemptReserveStockRequest,
+  ): Promise<AttemptReserveStockResponse> | Observable<AttemptReserveStockResponse> | AttemptReserveStockResponse;
+
+  /** rpc to release a previously held reservation (e.g. cart cleared, TTL expired) */
+
+  releaseStock(request: ReleaseStockRequest): Promise<StatusResponse> | Observable<StatusResponse> | StatusResponse;
+
+  /** rpc to return stock after an order is cancelled or refunded */
+
+  returnStock(request: ReturnStockRequest): Promise<StatusResponse> | Observable<StatusResponse> | StatusResponse;
 }
 
 export function StoreItemServiceControllerMethods() {
@@ -418,6 +476,9 @@ export function StoreItemServiceControllerMethods() {
       "removeVariantPrice",
       "addStoreItemBasePrice",
       "removeStoreItemBasePrice",
+      "attemptReserveStock",
+      "releaseStock",
+      "returnStock",
     ];
     for (const method of grpcMethods) {
       const descriptor: any = Reflect.getOwnPropertyDescriptor(constructor.prototype, method);

@@ -44,6 +44,12 @@ service StoreItemService {
   rpc AddStoreItemBasePrice(AddStoreItemBasePriceRequest) returns (Id) {}
   // rpc to remove a base price from a store item
   rpc RemoveStoreItemBasePrice(Id) returns (StatusResponse) {}
+  // rpc to atomically reserve stock for an item or variant; returns whether stock is tracked and whether reservation succeeded
+  rpc AttemptReserveStock(AttemptReserveStockRequest) returns (AttemptReserveStockResponse) {}
+  // rpc to release a previously held reservation (e.g. cart cleared, TTL expired)
+  rpc ReleaseStock(ReleaseStockRequest) returns (StatusResponse) {}
+  // rpc to return stock after an order is cancelled or refunded
+  rpc ReturnStock(ReturnStockRequest) returns (StatusResponse) {}
 }
 
 // PriceType enumeration for different types of prices
@@ -104,6 +110,7 @@ message CreateStoreItemRequest {
   optional string brand = 3;
   optional bool is_available = 4;
   optional google.protobuf.Timestamp expected_date = 5;
+  optional int32 quantity = 6;
 }
 
 // declaration of UpdateStoreItemRequest message
@@ -114,6 +121,7 @@ message UpdateStoreItemRequest {
   optional string brand = 4;
   optional bool is_available = 5;
   optional google.protobuf.Timestamp expected_date = 6;
+  optional int32 quantity = 7;
 }
 
 // declaration of StoreItemTranslationRequest message
@@ -150,6 +158,7 @@ message ChangeStoreItemPositionRequest {
 message AddStoreItemVariantRequest {
   string item_id = 1;
   string attribute_id = 2;
+  optional int32 quantity = 3;
 }
 
 // declaration of UpsertItemAttributeTranslationRequest message
@@ -204,6 +213,7 @@ message StoreItemWithOption {
   repeated ItemVariant variants = 12;
   repeated ItemBasePrice prices = 13;
   repeated ItemInfoAttribute attributes = 14;
+  optional int32 quantity = 15;
 }
 
 // Message representing an informational attribute (no price impact)
@@ -223,6 +233,7 @@ message ItemVariant {
   optional string discount_price = 6;
   optional string wholesale_price = 7;
   optional Currency currency = 8;
+  optional int32 quantity = 9;
 }
 
 // Message representing a base price for items without variants
@@ -239,6 +250,33 @@ message ItemImage {
   string url = 2;
   optional string alt = 3;
   int32 sort_order = 4;
+}
+
+// Message to request an atomic stock reservation for an item or variant
+message AttemptReserveStockRequest {
+  string item_id = 1;
+  optional string item_attribute_id = 2;
+  int32 quantity = 3;
+}
+
+// Response indicating whether stock is tracked and whether the reservation succeeded
+message AttemptReserveStockResponse {
+  bool stock_tracked = 1;
+  bool reserved = 2;
+}
+
+// Message to release a previously held stock reservation (e.g. cart cleared or TTL expired)
+message ReleaseStockRequest {
+  string item_id = 1;
+  optional string item_attribute_id = 2;
+  int32 quantity = 3;
+}
+
+// Message to return stock after an order is cancelled or refunded
+message ReturnStockRequest {
+  string item_id = 1;
+  optional string item_attribute_id = 2;
+  int32 quantity = 3;
 }
 
 // Command to generate TypeScript code with NestJS options, using null for optional fields and Date for timestamps

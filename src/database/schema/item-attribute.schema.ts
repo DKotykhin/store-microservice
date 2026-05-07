@@ -1,4 +1,4 @@
-import { foreignKey, mysqlTable, varchar } from 'drizzle-orm/mysql-core';
+import { foreignKey, int, mysqlTable, varchar } from 'drizzle-orm/mysql-core';
 import { relations } from 'drizzle-orm';
 
 import { baseColumns } from './base-columns';
@@ -13,6 +13,7 @@ export const itemAttribute = mysqlTable(
     ...baseColumns,
     itemId: varchar('item_id', { length: 36 }).notNull(),
     attributeId: varchar('attribute_id', { length: 36 }).notNull(),
+    quantity: int('quantity'),
   },
   (table) => [
     foreignKey({

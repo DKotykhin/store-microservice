@@ -10,10 +10,14 @@ import type {
   AddStoreItemImageRequest,
   AddStoreItemVariantRequest,
   AddVariantPriceRequest,
+  AttemptReserveStockRequest,
+  AttemptReserveStockResponse,
   ChangeStoreItemImagePositionRequest,
   ChangeStoreItemPositionRequest,
   CreateStoreItemRequest,
   Id,
+  ReleaseStockRequest,
+  ReturnStockRequest,
   StatusResponse,
   StoreItemListWithOption,
   StoreItemTranslationRequest,
@@ -339,6 +343,41 @@ export class StoreItemService {
     } catch (error) {
       this.logger.error(`Error removing store item base price: ${error instanceof Error ? error.message : error}`);
       throw AppError.internalServerError('Failed to remove store item base price');
+    }
+  }
+
+  // atomically reserve stock for an item or variant
+  async attemptReserveStock(data: AttemptReserveStockRequest): Promise<AttemptReserveStockResponse> {
+    this.logger.debug(`Attempting to reserve ${data.quantity} units for item: ${data.itemId}`);
+    try {
+      return await this.storeItemRepository.attemptReserveStock(data);
+    } catch (error) {
+      this.logger.error(`Error reserving stock: ${error instanceof Error ? error.message : error}`);
+      throw AppError.internalServerError('Failed to reserve stock');
+    }
+  }
+
+  // release a previously held stock reservation
+  async releaseStock(data: ReleaseStockRequest): Promise<StatusResponse> {
+    this.logger.debug(`Releasing ${data.quantity} units for item: ${data.itemId}`);
+    try {
+      await this.storeItemRepository.releaseStock(data);
+      return { success: true, message: 'Stock released successfully' };
+    } catch (error) {
+      this.logger.error(`Error releasing stock: ${error instanceof Error ? error.message : error}`);
+      throw AppError.internalServerError('Failed to release stock');
+    }
+  }
+
+  // return stock after an order is cancelled or refunded
+  async returnStock(data: ReturnStockRequest): Promise<StatusResponse> {
+    this.logger.debug(`Returning ${data.quantity} units for item: ${data.itemId}`);
+    try {
+      await this.storeItemRepository.releaseStock(data);
+      return { success: true, message: 'Stock returned successfully' };
+    } catch (error) {
+      this.logger.error(`Error returning stock: ${error instanceof Error ? error.message : error}`);
+      throw AppError.internalServerError('Failed to return stock');
     }
   }
 }

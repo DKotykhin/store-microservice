@@ -67,6 +67,7 @@ export function mapItem(item: ItemWithRelations): StoreItemWithOption {
       .sort((a, b) => ((a.regularPrice ?? 0) as number) - ((b.regularPrice ?? 0) as number)),
     prices: item.prices.filter((p) => !p.itemAttributeId).map(mapBasePrice),
     attributes: mapInfoAttributes(infoAttrs),
+    quantity: item.quantity ?? null,
   };
 }
 
@@ -92,6 +93,7 @@ function mapVariant(attr: ItemWithRelations['attributes'][number]): ItemVariant 
     discountPrice: discountPrice?.value ?? null,
     wholesalePrice: wholesalePrice?.value ?? null,
     currency: mapDbCurrency(regularPrice?.currency ?? discountPrice?.currency ?? wholesalePrice?.currency ?? 'UAH'),
+    quantity: attr.quantity ?? null,
   };
 }
 

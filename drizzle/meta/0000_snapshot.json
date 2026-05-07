@@ -1,7 +1,7 @@
 {
   "version": "5",
   "dialect": "mysql",
-  "id": "2ca512a0-8548-4d37-9ef6-492151f7022a",
+  "id": "9c0cf2d8-92a6-4ae3-83ca-91b269759e50",
   "prevId": "00000000-0000-0000-0000-000000000000",
   "tables": {
     "attribute_translation": {
@@ -139,7 +139,16 @@
           "default": 0
         }
       },
-      "indexes": {},
+      "indexes": {
+        "attribute_category_slug_unique": {
+          "name": "attribute_category_slug_unique",
+          "columns": [
+            "category_id",
+            "slug"
+          ],
+          "isUnique": true
+        }
+      },
       "foreignKeys": {
         "attribute_category_id_category_id_fk": {
           "name": "attribute_category_id_category_id_fk",
@@ -298,7 +307,7 @@
           "primaryKey": false,
           "notNull": true,
           "autoincrement": false,
-          "default": true
+          "default": false
         },
         "sort_order": {
           "name": "sort_order",
@@ -530,6 +539,13 @@
           "type": "varchar(36)",
           "primaryKey": false,
           "notNull": true,
+          "autoincrement": false
+        },
+        "quantity": {
+          "name": "quantity",
+          "type": "int",
+          "primaryKey": false,
+          "notNull": false,
           "autoincrement": false
         }
       },
@@ -851,6 +867,13 @@
           "autoincrement": false,
           "default": 0
         },
+        "quantity": {
+          "name": "quantity",
+          "type": "int",
+          "primaryKey": false,
+          "notNull": false,
+          "autoincrement": false
+        },
         "category_id": {
           "name": "category_id",
           "type": "varchar(36)",
@@ -859,7 +882,16 @@
           "autoincrement": false
         }
       },
-      "indexes": {},
+      "indexes": {
+        "item_category_slug_unique": {
+          "name": "item_category_slug_unique",
+          "columns": [
+            "category_id",
+            "slug"
+          ],
+          "isUnique": true
+        }
+      },
       "foreignKeys": {
         "item_category_id_category_id_fk": {
           "name": "item_category_id_category_id_fk",
